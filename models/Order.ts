@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export type OrderStatus =
+  | "PENDING_CONFIRMATION"
   | "PAYMENT_COMPLETED"
   | "CRAFTING"
   | "QUALITY_CHECK"
@@ -22,8 +23,6 @@ export interface IOrder extends Document {
   totalAmount: number;
   status: OrderStatus;
   shippingAddress: object;
-  paymentId: string;
-  razorpayOrderId: string;
   courierName?: string;
   trackingUrl?: string;
   estimatedDelivery?: Date;
@@ -46,12 +45,10 @@ const OrderSchema = new Schema<IOrder>(
     totalAmount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["PAYMENT_COMPLETED", "CRAFTING", "QUALITY_CHECK", "PACKED", "SHIPPED", "DELIVERED"],
-      default: "PAYMENT_COMPLETED",
+      enum: ["PENDING_CONFIRMATION","PAYMENT_COMPLETED", "CRAFTING", "QUALITY_CHECK", "PACKED", "SHIPPED", "DELIVERED"],
+      default: "PENDING_CONFIRMATION",
     },
     shippingAddress: { type: Object, required: true },
-    paymentId: { type: String, default: "" },
-    razorpayOrderId: { type: String, default: "" },
     courierName: String,
     trackingUrl: String,
     estimatedDelivery: Date,

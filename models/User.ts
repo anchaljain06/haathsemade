@@ -16,6 +16,7 @@ export interface IUser extends Document {
   phone: string;
   email: string;
   addresses: IAddress[];
+  role: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +37,7 @@ const UserSchema = new Schema<IUser>(
     name: { type: String, required: true },
     phone: { type: String, default: "" },
     email: { type: String, required: true },
+    role: { type: String, enum: ["customer", "admin"], default: "customer" },
     addresses: [AddressSchema],
   },
   { timestamps: true }

@@ -13,7 +13,7 @@ export interface IRequest extends Document {
   productId?: mongoose.Types.ObjectId;
   type: "MADE_TO_ORDER" | "CUSTOM_ONLY";
   description: string;
-  referenceImages: string[];
+  referenceLinks: string[];
   budget?: number;
   neededBy?: Date;
   status: RequestStatus;
@@ -34,7 +34,7 @@ const RequestSchema = new Schema<IRequest>(
       required: true,
     },
     description: { type: String, required: true },
-    referenceImages: [{ type: String }],
+    referenceLinks: [{ type: String }],
     budget: Number,
     neededBy: Date,
     status: {
