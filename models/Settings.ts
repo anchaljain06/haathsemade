@@ -7,7 +7,7 @@ export interface ISettings extends Document {
 
 const SettingsSchema = new Schema<ISettings>(
   {
-    whatsappNumber: { type: String, required: true, default: "" },
+    whatsappNumber: { type: String, default: "" },
   },
   { timestamps: true }
 );
