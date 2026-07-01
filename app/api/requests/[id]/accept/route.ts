@@ -5,17 +5,19 @@ import Request from "@/models/Request";
 
 export async function PATCH(
   req: globalThis.Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await props.params;
+
   await connectDB();
 
   const requestDoc = await Request.findOne({
-    _id: params.id,
+    _id: id,
     userId: user._id,
   });
 

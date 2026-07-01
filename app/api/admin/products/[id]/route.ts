@@ -3,12 +3,16 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import Product from "@/models/Product";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function PATCH( req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await props.params;
   const body = await req.json();
 
   if (body.name) {
@@ -18,7 +22,7 @@ export async function PATCH( req: NextRequest, { params }: { params: { id: strin
   await connectDB();
 
   const product = await Product.findByIdAndUpdate(
-    params.id,
+    id,
     body,
     { new: true }
   );
@@ -30,15 +34,20 @@ export async function PATCH( req: NextRequest, { params }: { params: { id: strin
   return NextResponse.json({ product });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await props.params;
+
   await connectDB();
 
-  const product = await Product.findByIdAndDelete(params.id);
+  const product = await Product.findByIdAndDelete(id);
 
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });

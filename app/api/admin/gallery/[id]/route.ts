@@ -5,19 +5,20 @@ import GalleryItem from "@/models/GalleryItem";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await props.params;
   const { isApproved } = await req.json();
 
   await connectDB();
 
   const item = await GalleryItem.findByIdAndUpdate(
-    params.id,
+    id,
     { isApproved },
     { new: true }
   );
@@ -29,15 +30,20 @@ export async function PATCH(
   return NextResponse.json({ item });
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: Request,
+  props: { params: Promise<{ id: string }> }
+) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await props.params;
+
   await connectDB();
 
-  const item = await GalleryItem.findByIdAndDelete(params.id);
+  const item = await GalleryItem.findByIdAndDelete(id);
 
   if (!item) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });

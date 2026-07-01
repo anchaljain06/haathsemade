@@ -6,13 +6,14 @@ import { NextResponse } from "next/server";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await props.params;
   const body = await req.json();
   const updateData: any = {};
 
@@ -29,7 +30,7 @@ export async function PATCH(
   await connectDB();
 
   const category = await Category.findByIdAndUpdate(
-    params.id,
+    id,
     updateData,
     { new: true }
   );
@@ -38,16 +39,19 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  { params }: { params: { id: string } }
+  req: Request,
+  props: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await props.params;
+
   await connectDB();
 
-  const productCount = await Product.countDocuments({ categoryId: params.id });
+  const productCount = await Product.countDocuments({ categoryId: id });
   if (productCount > 0) {
     return NextResponse.json(
       { error: "Cannot delete category with existing products" },
@@ -55,7 +59,7 @@ export async function DELETE(
     );
   }
 
-  await Category.findByIdAndDelete(params.id);
+  await Category.findByIdAndDelete(id);
 
   return NextResponse.json({ success: true });
 }

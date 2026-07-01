@@ -7,16 +7,18 @@ import User from "@/models/User";
 
 export async function POST(
   req: globalThis.Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await props.params;
+
   await connectDB();
 
-  const requestDoc = await Request.findById(params.id).populate(
+  const requestDoc = await Request.findById(id).populate(
     "productId",
     "name images"
   );
