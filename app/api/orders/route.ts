@@ -16,6 +16,13 @@ export async function POST(req: Request) {
   
   const { items, totalAmount, shippingAddress } = await req.json();
 
+  if (!items?.length || !totalAmount || !shippingAddress) {
+    return NextResponse.json(
+      { error: "Missing required fields" },
+      { status: 400 }
+    );
+  }
+
   await connectDB();
 
   const order = await Order.create({
