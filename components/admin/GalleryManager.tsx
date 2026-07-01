@@ -30,7 +30,7 @@ export default function GalleryManager({
 
   const filtered = items.filter((i) => i.type === tab);
 
-  async function handleUploadInspiration() {
+  async function handleUpload() {
     if (newImages.length === 0) return;
     setUploading(true);
     try {
@@ -39,7 +39,7 @@ export default function GalleryManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           images: newImages,
-          type: "INSPIRATION",
+          type: tab,
         }),
       });
       const data = await res.json();
@@ -103,24 +103,22 @@ export default function GalleryManager({
         </button>
       </div>
 
-      {/* Upload (only for inspiration tab — customer memories come from users) */}
-      {tab === "INSPIRATION" && (
-        <div className="bg-card border border-border rounded-lg p-5 mb-6 max-w-md">
-          <h3 className="font-heading text-base text-foreground mb-3">
-            Upload New Inspiration
-          </h3>
-          <ImageUpload value={newImages} onChange={setNewImages} maxFiles={10} />
-          {newImages.length > 0 && (
-            <button
-              onClick={handleUploadInspiration}
-              disabled={uploading}
-              className="mt-3 bg-primary text-white px-4 py-2 rounded-md text-sm hover:opacity-90 disabled:opacity-50"
-            >
-              {uploading ? "Saving..." : `Save ${newImages.length} image(s)`}
-            </button>
-          )}
-        </div>
-      )}
+      {/* Upload Form */}
+      <div className="bg-card border border-border rounded-lg p-5 mb-6 max-w-md">
+        <h3 className="font-heading text-base text-foreground mb-3">
+          Upload New {tab === "INSPIRATION" ? "Inspiration" : "Customer Memory"}
+        </h3>
+        <ImageUpload value={newImages} onChange={setNewImages} maxFiles={10} />
+        {newImages.length > 0 && (
+          <button
+            onClick={handleUpload}
+            disabled={uploading}
+            className="mt-3 bg-primary text-white px-4 py-2 rounded-md text-sm hover:opacity-90 disabled:opacity-50"
+          >
+            {uploading ? "Saving..." : `Save ${newImages.length} image(s)`}
+          </button>
+        )}
+      </div>
 
       {/* Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

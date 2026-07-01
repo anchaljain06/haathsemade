@@ -20,8 +20,9 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
             <Image
               src={item.image}
               alt={item.title ?? "Gallery image"}
-              width={400}
-              height={400}
+              width={0}
+              height={0}
+              sizes="(max-width: 768px) 50vw, 33vw"
               className="w-full h-auto object-cover"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">

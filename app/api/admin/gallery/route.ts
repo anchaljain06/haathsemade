@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { images } = await req.json();
+  const { images, type = "INSPIRATION" } = await req.json();
 
   if (!images || !Array.isArray(images) || images.length === 0) {
     return NextResponse.json({ error: "Images array is required" }, { status: 400 });
@@ -18,12 +18,12 @@ export async function POST(req: Request) {
   await connectDB();
 
   const galleryDocs = images.map((url: string) => ({
-    imageUrl: url,
-    type: "INSPIRATION",
+    image: url,
+    type: type,
     isApproved: true,
   }));
 
   const createdItems = await GalleryItem.insertMany(galleryDocs);
 
-  return NextResponse.json({ success: true, count: createdItems.length }, { status: 201 });
+  return NextResponse.json({ success: true, items: createdItems }, { status: 201 });
 }

@@ -12,9 +12,10 @@ async function getGalleryItems(type?: string) {
 export default async function GalleryPage({
   searchParams,
 }: {
-  searchParams: { tab?: string };
+  searchParams: Promise<{ tab?: string }>;
 }) {
-  const tab = searchParams.tab === "memories" ? "CUSTOMER_MEMORY" : "INSPIRATION";
+  const { tab: tabParam } = await searchParams;
+  const tab = tabParam === "memories" ? "CUSTOMER_MEMORY" : "INSPIRATION";
   const items = await getGalleryItems(tab);
 
   return (
