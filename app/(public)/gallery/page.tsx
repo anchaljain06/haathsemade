@@ -6,7 +6,8 @@ async function getGalleryItems(type?: string) {
   await connectDB();
   const query: any = { isApproved: true };
   if (type) query.type = type;
-  return GalleryItem.find(query).sort({ createdAt: -1 }).lean();
+  const items = await GalleryItem.find(query).sort({ createdAt: -1 }).lean();
+  return JSON.parse(JSON.stringify(items));
 }
 
 export default async function GalleryPage({

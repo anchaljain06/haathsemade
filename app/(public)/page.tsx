@@ -22,7 +22,7 @@ async function getHomepageData() {
       GalleryItem.find({ isApproved: true }).limit(6).lean(),
     ]);
 
-  return { featured, bestSellers, newArrivals, categories, galleryItems };
+  return JSON.parse(JSON.stringify({ featured, bestSellers, newArrivals, categories, galleryItems }));
 }
 
 export default async function HomePage() {
