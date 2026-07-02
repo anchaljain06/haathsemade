@@ -3,9 +3,10 @@ import Product from "@/models/Product";
 import Category from "@/models/Category";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest, {params}: {params: {slug: string}}){
+export async function GET(req: NextRequest, {params}: {params: Promise<{slug: string}>}){
   await connectDB();
-  const product = await Product.findOne({ slug: params.slug }).populate("categoryId", "name");
+  const { slug } = await params;
+  const product = await Product.findOne({ slug }).populate("categoryId", "name");
 
   if(!product || product.isPublished === false){
     return NextResponse.json(

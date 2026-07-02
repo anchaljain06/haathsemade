@@ -3,6 +3,7 @@ import Product from "@/models/Product";
 import Category from "@/models/Category";
 import ProductCard from "@/components/products/ProductCard";
 import ProductFilters from "@/components/products/ProductFilters";
+import { Suspense } from "react";
 
 interface SearchParams {
   category?: string;
@@ -59,12 +60,14 @@ export default async function ProductsPage({
       <div className="flex flex-col md:flex-row gap-8">
         {/* Filters Sidebar */}
         <aside className="w-full md:w-56 shrink-0">
-          <ProductFilters
-            categories={categories as any}
-            currentCategory={searchParams.category}
-            currentMode={searchParams.mode}
-            currentSort={searchParams.sort}
-          />
+          <Suspense fallback={<div className="text-sm text-foreground-muted">Loading filters...</div>}>
+            <ProductFilters
+              categories={categories as any}
+              currentCategory={searchParams.category}
+              currentMode={searchParams.mode}
+              currentSort={searchParams.sort}
+            />
+          </Suspense>
         </aside>
 
         {/* Products Grid */}

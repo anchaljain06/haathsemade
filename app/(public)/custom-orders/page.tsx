@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { buildRequestWhatsAppLink } from "@/lib/buildWhatsAppLink";
 
 const schema = z.object({
@@ -18,7 +18,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function CustomOrdersPage() {
+function CustomOrdersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const productId = searchParams.get("productId");
@@ -96,7 +96,7 @@ export default function CustomOrdersPage() {
           <textarea
             {...register("description")}
             rows={5}
-            placeholder="Describe your vision — colors, size, occasion, materials..."
+            placeholder="Describe your vision - colors, size, occasion, materials..."
             className="w-full border border-border rounded-md px-4 py-2.5 text-sm text-foreground bg-card focus:outline-none focus:border-primary resize-none"
           />
           {errors.description && (
@@ -109,7 +109,7 @@ export default function CustomOrdersPage() {
         {/* Reference Links */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            Reference links — optional
+            Reference links (optional)
           </label>
           <textarea
             {...register("referenceLinks")}
@@ -125,7 +125,7 @@ export default function CustomOrdersPage() {
         {/* Budget */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            Budget (₹) — optional
+            Budget (₹) - optional
           </label>
           <input
             {...register("budget")}
@@ -138,7 +138,7 @@ export default function CustomOrdersPage() {
         {/* Needed By */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            Needed by — optional
+            Needed by (optional)
           </label>
           <input
             {...register("neededBy")}
@@ -150,7 +150,7 @@ export default function CustomOrdersPage() {
         {/* Other Details */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            Any other details — optional
+            Any other details (optional)
           </label>
           <textarea
             {...register("otherDetails")}
@@ -177,5 +177,13 @@ export default function CustomOrdersPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function CustomOrdersPage() {
+  return (
+    <Suspense fallback={<div className="max-w-2xl mx-auto px-4 py-16">Loading...</div>}>
+      <CustomOrdersContent />
+    </Suspense>
   );
 }

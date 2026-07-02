@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { buildRequestWhatsAppLink } from "@/lib/buildWhatsAppLink";
 
 const schema = z.object({
@@ -16,7 +16,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function NewRequestPage() {
+function NewRequestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const productId = searchParams.get("productId");
@@ -69,7 +69,11 @@ export default function NewRequestPage() {
       toast.success("Request submitted!");
       const settingsRes = await fetch("/api/settings");
       const { whatsappNumber } = await settingsRes.json();
-      const link = buildRequestWhatsAppLink(whatsappNumber, type as any, data.description);
+      const link = buildRequestWhatsAppLink(
+        whatsappNumber,
+        type as any,
+        data.description,
+      );
       window.location.href = link;
     } catch (err: any) {
       toast.error(err.message ?? "Something went wrong");
@@ -86,7 +90,8 @@ export default function NewRequestPage() {
         </h1>
         {productName && (
           <p className="text-foreground-muted text-sm">
-            For: <span className="text-foreground font-medium">{productName}</span>
+            For:{" "}
+            <span className="text-foreground font-medium">{productName}</span>
           </p>
         )}
       </div>
@@ -141,5 +146,15 @@ export default function NewRequestPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function NewRequestPage() {
+  return (
+    <Suspense
+      fallback={<div className="max-w-xl mx-auto px-4 py-16">Loading...</div>}
+    >
+      <NewRequestContent />
+    </Suspense>
   );
 }
