@@ -54,14 +54,15 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center cursor-zoom-out"
           onClick={() => setSelected(null)}
         >
-          <Image
-            src={selected}
-            alt="Full size"
-            width={0}
-            height={0}
-            sizes="90vw"
-            className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg"
-          />
+          <div className="relative max-w-[90vw] max-h-[90vh] w-[90vw] h-[90vh]">
+            <Image
+              src={selected}
+              alt={items.find((i) => i.image === selected)?.title ?? "Gallery image full view"}
+              fill
+              sizes="90vw"
+              className="object-contain rounded-lg"
+            />
+          </div>
         </div>
       )}
     </>

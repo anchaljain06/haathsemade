@@ -127,7 +127,7 @@ export default function GalleryManager({
             key={item._id}
             className="relative aspect-square rounded-lg overflow-hidden border border-border group"
           >
-            <Image src={item.image} alt={item.title ?? ""} fill className="object-cover" />
+            <Image src={item.image} alt={item.title ?? "Gallery image"} fill className="object-cover" />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
               <button
                 onClick={() => toggleApprove(item)}
