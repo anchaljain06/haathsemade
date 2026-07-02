@@ -10,6 +10,11 @@ async function getGalleryItems(type?: string) {
   return JSON.parse(JSON.stringify(items));
 }
 
+export const metadata = {
+  title: "Gallery — Handmade Boutique",
+  description: "Browse our work and get inspired for your next custom order.",
+};
+
 export default async function GalleryPage({
   searchParams,
 }: {

@@ -25,6 +25,22 @@ async function getProduct(id: string) {
   return { product, category, suggested };
 }
 
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+  const data = await getProduct(params.slug);
+  if (!data) return { title: "Product Not Found" };
+
+  const p = data.product as any;
+  return {
+    title: `${p.name} — Handmade Boutique`,
+    description: p.description,
+    openGraph: {
+      title: p.name,
+      description: p.description,
+      images: p.images[0] ? [{ url: p.images[0] }] : [],
+    },
+  };
+}
+
 export default async function ProductDetailPage({
   params,
 }: {

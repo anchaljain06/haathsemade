@@ -7,6 +7,11 @@ async function getCategories() {
   return Category.find({ isActive: true }).lean();
 }
 
+export const metadata = {
+  title: "Browse Categories — Handmade Boutique",
+  description: "Explore our handmade collections by category.",
+};
+
 export default async function CategoriesPage() {
   const categories = await getCategories();
 
