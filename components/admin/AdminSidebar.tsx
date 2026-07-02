@@ -24,7 +24,6 @@ const links = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/requests", label: "Requests", icon: MessageSquareText },
   { href: "/admin/gallery", label: "Gallery", icon: Images },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
