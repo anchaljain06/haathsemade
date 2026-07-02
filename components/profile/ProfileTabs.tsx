@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { addressSchema } from "@/schemas/zodValidations";
 
 interface Address {
   _id?: string;
@@ -70,6 +71,12 @@ export default function ProfileTabs({
   }
 
   async function handleAddAddress() {
+    const result = addressSchema.safeParse(newAddress);
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
+      return;
+    }
+
     if (!newAddress.line1 || !newAddress.city || !newAddress.pincode) {
       toast.error("Please fill all required fields");
       return;

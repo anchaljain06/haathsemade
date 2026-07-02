@@ -7,6 +7,18 @@ import ProductCard from "@/components/products/ProductCard";
 import CategoryCard from "@/components/products/CategoryCard";
 import GalleryGrid from "@/components/sections/GalleryGrid";
 
+
+export const metadata = {
+  title: "Handmade Boutique — Crafted with Love",
+  description:
+    "Handcrafted bouquets, resin art, keychains and personalized gifts. Made to order, made for you.",
+  openGraph: {
+    title: "Handmade Boutique",
+    description: "Handcrafted with love, delivered with care.",
+    type: "website",
+  },
+};
+
 async function getHomepageData() {
   await connectDB();
 

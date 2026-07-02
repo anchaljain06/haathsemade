@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ImageUpload from "@/components/shared/ImageUpload";
+import { productSchema } from "@/schemas/zodValidations";
 
 interface Category {
   _id: string;
@@ -57,6 +58,12 @@ export default function ProductForm({
   }
 
   async function handleSubmit(publish: boolean) {
+    const result = productSchema.safeParse({ ...form, isPublished: publish });
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
+      return;
+    }
+
     if (!form.name || !form.categoryId || form.price <= 0) {
       toast.error("Please fill in name, category, and a valid price");
       return;
