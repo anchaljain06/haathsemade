@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import GalleryItem from "@/models/GalleryItem";
+import { revalidatePath } from "next/cache";
 
 export async function PATCH(
   req: Request,
@@ -27,6 +28,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Item not found" }, { status: 404 });
   }
 
+  revalidatePath("/gallery");
   return NextResponse.json({ item });
 }
 
@@ -49,5 +51,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Item not found" }, { status: 404 });
   }
 
+  revalidatePath("/gallery");
   return NextResponse.json({ success: true });
 }

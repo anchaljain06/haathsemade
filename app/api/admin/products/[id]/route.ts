@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import Product from "@/models/Product";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function PATCH(
   req: NextRequest,
@@ -31,6 +32,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
+  revalidatePath("/", "layout");
   return NextResponse.json({ product });
 }
 
@@ -53,5 +55,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
+  revalidatePath("/", "layout");
   return NextResponse.json({ success: true });
 }

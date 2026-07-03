@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import Category from "@/models/Category";
 import Product from "@/models/Product";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function PATCH(
   req: Request,
@@ -35,6 +36,7 @@ export async function PATCH(
     { new: true }
   );
 
+  revalidatePath("/", "layout");
   return NextResponse.json({ category });
 }
 
@@ -61,5 +63,6 @@ export async function DELETE(
 
   await Category.findByIdAndDelete(id);
 
+  revalidatePath("/", "layout");
   return NextResponse.json({ success: true });
 }

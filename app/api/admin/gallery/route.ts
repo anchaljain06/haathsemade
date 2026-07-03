@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import GalleryItem from "@/models/GalleryItem";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -24,6 +25,8 @@ export async function POST(req: Request) {
   }));
 
   const createdItems = await GalleryItem.insertMany(galleryDocs);
+  
+  revalidatePath("/gallery");
 
   return NextResponse.json({ success: true, items: createdItems }, { status: 201 });
 }

@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import Category from "@/models/Category";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -31,5 +32,6 @@ export async function POST(req: Request) {
     isActive: true,
   });
 
+  revalidatePath("/", "layout");
   return NextResponse.json({ category }, { status: 201 });
 }

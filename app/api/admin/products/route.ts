@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import Category from "@/models/Category";
 import Product from "@/models/Product";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req:NextRequest){
   const user = await getCurrentUser();
@@ -31,5 +32,7 @@ export async function POST(req:NextRequest){
   const productData = { ...body, slug };
 
   const product = await Product.create(productData);
+  
+  revalidatePath("/", "layout");
   return NextResponse.json({ product }, { status: 201 });
 }
