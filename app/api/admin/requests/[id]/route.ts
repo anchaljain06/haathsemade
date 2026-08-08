@@ -1,7 +1,10 @@
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
-import Request from "@/models/Request";
+import { parseBody } from "@/lib/validate";
+import { adminRequestUpdateSchema } from "@/schemas/zodValidations";
+import RequestModel from "@/models/Request";
 
 export async function PATCH(
   req: globalThis.Request,
@@ -13,20 +16,19 @@ export async function PATCH(
   }
 
   const { id } = await props.params;
-  const body = await req.json();
-  const { status, quotedPrice, estimatedCraftTime, adminNotes } = body;
+  if (!mongoose.isValidObjectId(id)) {
+    return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  }
+
+  const parsed = await parseBody(req, adminRequestUpdateSchema);
+  if (parsed.response) return parsed.response;
 
   await connectDB();
 
-  const updated = await Request.findByIdAndUpdate(
+  const updated = await RequestModel.findByIdAndUpdate(
     id,
-    {
-      ...(status && { status }),
-      ...(quotedPrice !== undefined && { quotedPrice }),
-      ...(estimatedCraftTime && { estimatedCraftTime }),
-      ...(adminNotes && { adminNotes }),
-    },
-    { new: true }
+    { $set: parsed.data },
+    { new: true, runValidators: true }
   );
 
   if (!updated) {

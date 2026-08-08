@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { parseBody } from "@/lib/validate";
+import { createRequestSchema } from "@/schemas/zodValidations";
 import Request from "@/models/Request";
 
 export async function POST(req: globalThis.Request) {
@@ -13,15 +15,10 @@ export async function POST(req: globalThis.Request) {
     return NextResponse.json({ error: "PHONE_REQUIRED" }, { status: 403 });
   }
   
-  const body = await req.json();
-  const { type, productId, description, referenceLinks, budget, neededBy } = body;
-
-  if (!type || !description) {
-    return NextResponse.json(
-      { error: "type and description are required" },
-      { status: 400 }
-    );
-  }
+  const parsed = await parseBody(req, createRequestSchema);
+  if (parsed.response) return parsed.response;
+  const { type, productId, description, referenceLinks, budget, neededBy } =
+    parsed.data;
 
   await connectDB();
 

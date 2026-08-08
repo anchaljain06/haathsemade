@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
@@ -13,6 +14,9 @@ export async function PATCH(
   }
 
   const { id } = await props.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  }
 
   await connectDB();
 
@@ -32,14 +36,23 @@ export async function PATCH(
     );
   }
 
+  if (!requestDoc.quotedPrice || requestDoc.quotedPrice <= 0) {
+    return NextResponse.json(
+      { error: "This request has no price quoted yet" },
+      { status: 409 }
+    );
+  }
+
   requestDoc.status = "ACCEPTED";
   await requestDoc.save();
 
-  // Return enough info for the client to add it to cart
+  // Return enough info for the client to add it to cart. The cart is keyed by
+  // requestId, not productId — checkout re-reads quotedPrice server-side, so
+  // the price below is for display only.
   return NextResponse.json({
     request: requestDoc,
     cartItem: {
-      productId: requestDoc.productId?.toString() ?? requestDoc._id.toString(),
+      requestId: requestDoc._id.toString(),
       name: requestDoc.description.slice(0, 50),
       image: "",
       price: requestDoc.quotedPrice,

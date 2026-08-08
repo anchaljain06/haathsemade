@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useCartStore } from "@/store/cartStore";
+import { useCartStore, cartItemKey } from "@/store/cartStore";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { buildOrderWhatsAppLink } from "@/lib/buildWhatsAppLink";
@@ -75,8 +75,12 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items,
-          totalAmount,
+          // Only ids and quantities — the server looks up prices itself.
+          items: items.map((i) =>
+            i.requestId
+              ? { requestId: i.requestId, quantity: 1 }
+              : { productId: i.productId, quantity: i.quantity }
+          ),
           shippingAddress: selectedAddress,
         }),
       });
@@ -93,11 +97,12 @@ export default function CheckoutPage() {
 
       const settingsRes = await fetch("/api/settings");
       const { whatsappNumber } = await settingsRes.json();
+      // Use the server's authoritative items and total, not the local cart.
       const link = buildOrderWhatsAppLink(
         whatsappNumber,
         data.order._id,
-        items,
-        totalAmount
+        data.order.items,
+        data.order.totalAmount
       );
 
       clearCart();
@@ -218,7 +223,7 @@ export default function CheckoutPage() {
             </h2>
             {items.map((item) => (
               <div
-                key={item.productId}
+                key={cartItemKey(item)}
                 className="flex justify-between text-sm py-2 border-b border-border last:border-0"
               >
                 <span className="text-foreground-muted">

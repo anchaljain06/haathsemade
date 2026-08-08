@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 
 export default function Footer() {
   return (
@@ -9,14 +10,14 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <h3 className="font-heading text-lg text-foreground mb-3">
-              Handmade Boutique
+              {BRAND.name}
             </h3>
             <p className="text-foreground-muted text-sm leading-relaxed mb-4">
               Every piece crafted with love and care, made just for you.
             </p>
             <div className="flex gap-3">
               <a
-                href="https://instagram.com"
+                href={BRAND.instagramUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="text-foreground-muted hover:text-primary text-sm transition-colors"
@@ -109,7 +110,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-border mt-10 pt-6 text-center">
           <p className="text-foreground-muted text-xs">
-            © {new Date().getFullYear()} Handmade Boutique. All rights reserved.
+            © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
           </p>
         </div>
       </div>

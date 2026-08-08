@@ -56,5 +56,8 @@ const OrderSchema = new Schema<IOrder>(
   { timestamps: true }
 );
 
+// "My orders", newest first.
+OrderSchema.index({ userId: 1, createdAt: -1 });
+
 export default mongoose.models.Order ||
   mongoose.model<IOrder>("Order", OrderSchema);

@@ -1,42 +1,58 @@
+import { cache } from "react";
 import { connectDB } from "@/lib/db";
 import Product from "@/models/Product";
 import Category from "@/models/Category";
 import { notFound } from "next/navigation";
+import { findProductBySlugOrId } from "@/lib/findProduct";
+import { serialize } from "@/lib/serialize";
+import { BRAND } from "@/lib/brand";
 import ProductGallery from "@/components/products/ProductGallery";
 import ProductActions from "@/components/products/ProductActions";
 import ProductCard from "@/components/products/ProductCard";
 
-async function getProduct(id: string) {
+/**
+ * Wrapped in `cache()` so generateMetadata and the page component share one
+ * result instead of each running the queries independently.
+ */
+const getProduct = cache(async (identifier: string) => {
+  const product = await findProductBySlugOrId(identifier);
+  if (!product || !product.isPublished) return null;
+
   await connectDB();
-  const product = await Product.findById(id).lean();
-  if (!product || !(product as any).isPublished) return null;
 
   const [category, suggested] = await Promise.all([
-    Category.findById((product as any).categoryId).lean(),
+    Category.findById(product.categoryId).select("name slug").lean(),
     Product.find({
       isPublished: true,
-      categoryId: (product as any).categoryId,
-      _id: { $ne: (product as any)._id },
+      categoryId: product.categoryId,
+      _id: { $ne: product._id },
     })
+      .select("name slug price images inventoryMode estimatedCraftTime stock isCustomizable")
       .limit(4)
       .lean(),
   ]);
 
-  return { product, category, suggested };
-}
+  return serialize({ product, category, suggested });
+});
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const data = await getProduct(params.slug);
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const data = await getProduct(slug);
   if (!data) return { title: "Product Not Found" };
 
   const p = data.product as any;
   return {
-    title: `${p.name} — Handmade Boutique`,
+    title: `${p.name} — ${BRAND.name}`,
     description: p.description,
+    alternates: { canonical: `/products/${p.slug ?? p._id}` },
     openGraph: {
       title: p.name,
       description: p.description,
-      images: p.images[0] ? [{ url: p.images[0] }] : [],
+      images: p.images?.[0] ? [{ url: p.images[0] }] : [],
     },
   };
 }
@@ -44,13 +60,14 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function ProductDetailPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const data = await getProduct(params.slug);
+  const { slug } = await params;
+  const data = await getProduct(slug);
   if (!data) notFound();
 
-  const { product, category, suggested } = data;
-  const p = product as any;
+  const { category, suggested } = data;
+  const p = data.product as any;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -101,7 +118,7 @@ export default async function ProductDetailPage({
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {suggested.map((s: any) => (
-              <ProductCard key={s._id.toString()} product={s} />
+              <ProductCard key={s._id} product={s} />
             ))}
           </div>
         </div>

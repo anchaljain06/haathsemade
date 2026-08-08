@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { toast } from "sonner";
 import Link from "next/link";
+import WishlistButton from "@/components/products/WishlistButton";
 
 interface Product {
   _id: string;
+  slug?: string;
   name: string;
   images: string[];
   price: number;
@@ -21,7 +23,16 @@ export default function ProductActions({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem);
   const router = useRouter();
 
+  const outOfStock =
+    product.inventoryMode === "READY_STOCK" && product.stock <= 0;
+  const atStockLimit = quantity >= product.stock;
+
   function handleAddToCart() {
+    if (outOfStock) {
+      toast.error("This piece is sold out right now");
+      return;
+    }
+
     addItem({
       productId: product._id,
       name: product.name,
@@ -33,6 +44,10 @@ export default function ProductActions({ product }: { product: Product }) {
   }
 
   function handleBuyNow() {
+    if (outOfStock) {
+      toast.error("This piece is sold out right now");
+      return;
+    }
     handleAddToCart();
     router.push("/cart");
   }
@@ -41,43 +56,75 @@ export default function ProductActions({ product }: { product: Product }) {
     <div className="space-y-4">
       {product.inventoryMode === "READY_STOCK" && (
         <>
-          {/* Quantity */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-foreground-muted">Qty:</span>
-            <div className="flex items-center border border-border rounded-md">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="px-3 py-1 text-foreground-muted hover:text-foreground"
-              >
-                −
-              </button>
-              <span className="px-3 py-1 text-sm">{quantity}</span>
-              <button
-                onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                className="px-3 py-1 text-foreground-muted hover:text-foreground"
-              >
-                +
-              </button>
+          {outOfStock ? (
+            <div className="bg-background-secondary border border-border rounded-md p-4 text-sm text-foreground-muted">
+              <p className="text-foreground font-medium mb-1">Sold out</p>
+              <p>
+                This one has found a home. Request a similar piece and we&apos;ll
+                make it for you.
+              </p>
             </div>
-            <span className="text-xs text-foreground-muted">
-              {product.stock} available
-            </span>
-          </div>
+          ) : (
+            <>
+              {/* Quantity */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-foreground-muted">Qty:</span>
+                <div className="flex items-center border border-border rounded-md">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Decrease quantity"
+                    className="px-3 py-1 text-foreground-muted hover:text-foreground disabled:opacity-40 disabled:hover:text-foreground-muted"
+                  >
+                    −
+                  </button>
+                  <span className="px-3 py-1 text-sm">{quantity}</span>
+                  <button
+                    onClick={() =>
+                      setQuantity(Math.min(product.stock, quantity + 1))
+                    }
+                    disabled={atStockLimit}
+                    aria-label="Increase quantity"
+                    className="px-3 py-1 text-foreground-muted hover:text-foreground disabled:opacity-40 disabled:hover:text-foreground-muted"
+                  >
+                    +
+                  </button>
+                </div>
+                <span
+                  className={`text-xs ${
+                    product.stock <= 3
+                      ? "text-amber-600 font-medium"
+                      : "text-foreground-muted"
+                  }`}
+                >
+                  {product.stock <= 3
+                    ? `Only ${product.stock} left`
+                    : `${product.stock} available`}
+                </span>
+              </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={handleAddToCart}
-              className="flex-1 border border-primary text-primary py-2.5 rounded-md text-sm font-medium hover:bg-primary hover:text-white transition-colors"
-            >
-              Add to Cart
-            </button>
-            <button
-              onClick={handleBuyNow}
-              className="flex-1 bg-primary text-white py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              Buy Now
-            </button>
-          </div>
+              {atStockLimit && product.stock > 3 && (
+                <p className="text-xs text-foreground-muted">
+                  That&apos;s all we have of this one right now.
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-1 border border-primary text-primary py-2.5 rounded-md text-sm font-medium hover:bg-primary hover:text-white transition-colors"
+                >
+                  Add to Cart
+                </button>
+                <button
+                  onClick={handleBuyNow}
+                  className="flex-1 bg-primary text-white py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  Buy Now
+                </button>
+              </div>
+            </>
+          )}
         </>
       )}
 
@@ -110,6 +157,18 @@ export default function ProductActions({ product }: { product: Product }) {
           </Link>
         </div>
       )}
+
+      <WishlistButton
+        variant="full"
+        item={{
+          productId: product._id,
+          slug: product.slug,
+          name: product.name,
+          image: product.images[0] ?? "",
+          price: product.price,
+          inventoryMode: product.inventoryMode,
+        }}
+      />
 
       {product.isCustomizable && product.inventoryMode === "READY_STOCK" && (
         <Link

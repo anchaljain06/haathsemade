@@ -25,5 +25,8 @@ const GalleryItemSchema = new Schema<IGalleryItem>(
   { timestamps: true }
 );
 
+// Public gallery: approved items by type, newest first.
+GalleryItemSchema.index({ isApproved: 1, type: 1, createdAt: -1 });
+
 export default mongoose.models.GalleryItem ||
   mongoose.model<IGalleryItem>("GalleryItem", GalleryItemSchema);

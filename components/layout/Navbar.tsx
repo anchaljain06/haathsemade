@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingCart, Menu, X } from "lucide-react";
+import { ShoppingCart, Menu, Heart } from "lucide-react";
 import { useUser, SignOutButton } from "@clerk/nextjs";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -16,6 +16,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cartStore";
+import { useWishlistStore } from "@/store/wishlistStore";
+import { BRAND } from "@/lib/brand";
+import { useHydrated } from "@/hooks/useHydrated";
+import SearchBox from "@/components/layout/SearchBox";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -30,6 +34,12 @@ export default function Navbar() {
   const { user, isSignedIn } = useUser();
   const [mobileOpen, setMobileOpen] = useState(false);
   const totalItems = useCartStore((s) => s.totalItems);
+  const savedCount = useWishlistStore((s) => s.items.length);
+
+  // The cart is persisted in localStorage, so the server renders 0 while the
+  // client rehydrates a real count. Gate the badge on hydration so both renders
+  // agree and React doesn't report a mismatch.
+  const hydrated = useHydrated();
 
   return (
     <header className="sticky top-0 z-50 bg-background border-b border-border">
@@ -38,7 +48,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="font-heading text-xl text-foreground">
-            Handmade Boutique
+            {BRAND.name}
           </Link>
 
           {/* Desktop Nav */}
@@ -58,12 +68,31 @@ export default function Navbar() {
             ))}
           </nav>
 
+          {/* Search — desktop */}
+          <div className="hidden lg:block flex-1 max-w-xs mx-6">
+            <SearchBox />
+          </div>
+
           {/* Right Side */}
           <div className="flex items-center gap-3">
+            {/* Wishlist */}
+            <Link
+              href="/wishlist"
+              aria-label="Wishlist"
+              className="relative p-2"
+            >
+              <Heart className="w-5 h-5 text-foreground-muted hover:text-primary transition-colors" />
+              {hydrated && savedCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 w-4 h-4 p-0 flex items-center justify-center text-[10px] bg-primary text-white border-0">
+                  {savedCount}
+                </Badge>
+              )}
+            </Link>
+
             {/* Cart */}
-            <Link href="/cart" className="relative p-2">
+            <Link href="/cart" aria-label="Cart" className="relative p-2">
               <ShoppingCart className="w-5 h-5 text-foreground-muted hover:text-primary transition-colors" />
-              {totalItems > 0 && (
+              {hydrated && totalItems > 0 && (
                 <Badge className="absolute -top-1 -right-1 w-4 h-4 p-0 flex items-center justify-center text-[10px] bg-primary text-white border-0">
                   {totalItems}
                 </Badge>
@@ -115,7 +144,10 @@ export default function Navbar() {
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-64 bg-background">
-                <div className="flex flex-col gap-6 mt-8">
+                <div className="mt-8">
+                  <SearchBox />
+                </div>
+                <div className="flex flex-col gap-6 mt-6">
                   {navLinks.map((link) => (
                     <Link
                       key={link.href}

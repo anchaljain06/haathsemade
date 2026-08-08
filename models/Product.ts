@@ -4,6 +4,7 @@ export type InventoryMode = "READY_STOCK" | "MADE_TO_ORDER" | "CUSTOM_ONLY";
 
 export interface IProduct extends Document {
   name: string;
+  slug: string;
   description: string;
   images: string[];
   price: number;
@@ -20,6 +21,7 @@ export interface IProduct extends Document {
 const ProductSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true, trim: true },
+    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     description: { type: String, required: true },
     images: [{ type: String }],
     price: { type: Number, required: true, min: 0 },
@@ -36,6 +38,14 @@ const ProductSchema = new Schema<IProduct>(
   },
   { timestamps: true }
 );
+
+// Storefront listing: filter by published + category, default sort by newest.
+ProductSchema.index({ isPublished: 1, createdAt: -1 });
+ProductSchema.index({ isPublished: 1, categoryId: 1 });
+ProductSchema.index({ isPublished: 1, inventoryMode: 1 });
+
+// Navbar search.
+ProductSchema.index({ name: "text", description: "text" });
 
 export default mongoose.models.Product ||
   mongoose.model<IProduct>("Product", ProductSchema);

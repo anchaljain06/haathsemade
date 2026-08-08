@@ -5,11 +5,13 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Clock, Paintbrush } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
+import WishlistButton from "@/components/products/WishlistButton";
 import { toast } from "sonner";
 
 interface Product {
   _id: string;
   name: string;
+  slug?: string;
   description: string;
   images: string[];
   price: number;
@@ -25,7 +27,13 @@ const modeBadge = {
   CUSTOM_ONLY: { label: "Custom Only", className: "bg-purple-100 text-purple-700 border-0" },
 };
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({
+  product,
+  priority = false,
+}: {
+  product: Product;
+  priority?: boolean;
+}) {
   const addItem = useCartStore((s) => s.addItem);
   const badge = modeBadge[product.inventoryMode];
 
@@ -43,7 +51,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link
-      href={`/products/${product._id}`}
+      href={`/products/${product.slug ?? product._id}`}
       className="group bg-card rounded-lg border border-border overflow-hidden hover:shadow-hover transition-shadow"
     >
       {/* Image */}
@@ -53,6 +61,8 @@ export default function ProductCard({ product }: { product: Product }) {
             src={product.images[0]}
             alt={product.name}
             fill
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            priority={priority}
             className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
@@ -62,6 +72,18 @@ export default function ProductCard({ product }: { product: Product }) {
         )}
         <div className="absolute top-2 left-2">
           <Badge className={badge.className}>{badge.label}</Badge>
+        </div>
+        <div className="absolute top-2 right-2">
+          <WishlistButton
+            item={{
+              productId: product._id,
+              slug: product.slug,
+              name: product.name,
+              image: product.images[0] ?? "",
+              price: product.price,
+              inventoryMode: product.inventoryMode,
+            }}
+          />
         </div>
       </div>
 

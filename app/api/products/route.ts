@@ -10,11 +10,29 @@ export async function GET(req: NextRequest) {
     const category = req.nextUrl.searchParams.get("category");
     const mode = req.nextUrl.searchParams.get("mode");
     const sort = req.nextUrl.searchParams.get("sort");
-    const page = parseInt(req.nextUrl.searchParams.get("page") ?? "1");
-    const limit = parseInt(req.nextUrl.searchParams.get("limit") ?? "12");
+    const q = req.nextUrl.searchParams.get("q");
+
+    const parsedPage = Number.parseInt(
+      req.nextUrl.searchParams.get("page") ?? "1",
+      10
+    );
+    const parsedLimit = Number.parseInt(
+      req.nextUrl.searchParams.get("limit") ?? "12",
+      10
+    );
+    // Clamp so a hand-crafted ?page=-5&limit=99999 can't skew the query.
+    const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limit =
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, 48)
+        : 12;
     const skip = (page - 1) * limit;
 
     const query: any = { isPublished: true };
+
+    if (q?.trim()) {
+      query.$text = { $search: q.trim() };
+    }
 
     if (category) {
       const categoryDoc = await Category.findOne({ slug: category });

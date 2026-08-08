@@ -1,3 +1,5 @@
+import { BRAND } from "@/lib/brand";
+
 export default function PrivacyPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-16">
@@ -39,8 +41,8 @@ export default function PrivacyPage() {
             Contact
           </h2>
           <p>
-            For any privacy concerns, please contact us at
-            hello@handmadeboutique.com.
+            For any privacy concerns, please contact us at{" "}
+            {BRAND.contactEmail}.
           </p>
         </section>
       </div>

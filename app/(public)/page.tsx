@@ -3,42 +3,88 @@ import { connectDB } from "@/lib/db";
 import Product from "@/models/Product";
 import Category from "@/models/Category";
 import GalleryItem from "@/models/GalleryItem";
+import Order from "@/models/Order";
 import ProductCard from "@/components/products/ProductCard";
 import CategoryCard from "@/components/products/CategoryCard";
 import GalleryGrid from "@/components/sections/GalleryGrid";
+import { serialize } from "@/lib/serialize";
+import { BRAND } from "@/lib/brand";
 
+const CARD_FIELDS =
+  "name slug price images inventoryMode estimatedCraftTime stock isCustomizable description";
 
 export const metadata = {
-  title: "Handmade Boutique — Crafted with Love",
-  description:
-    "Handcrafted bouquets, resin art, keychains and personalized gifts. Made to order, made for you.",
+  title: `${BRAND.name} — ${BRAND.tagline}`,
+  description: BRAND.description,
   openGraph: {
-    title: "Handmade Boutique",
+    title: BRAND.name,
     description: "Handcrafted with love, delivered with care.",
     type: "website",
   },
 };
 
+/** Top sellers by units actually ordered; empty until orders exist. */
+async function getBestSellers(limit: number) {
+  const rows = await Order.aggregate([
+    { $unwind: "$items" },
+    { $match: { "items.productId": { $ne: null } } },
+    { $group: { _id: "$items.productId", sold: { $sum: "$items.quantity" } } },
+    { $sort: { sold: -1 } },
+    { $limit: limit },
+  ]);
+
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((r) => r._id);
+  const products = await Product.find({ _id: { $in: ids }, isPublished: true })
+    .select(CARD_FIELDS)
+    .lean();
+
+  // Preserve the aggregation's ranking, which $in does not.
+  const order = new Map(ids.map((id, i) => [String(id), i]));
+  return products.sort(
+    (a: any, b: any) =>
+      (order.get(String(a._id)) ?? 0) - (order.get(String(b._id)) ?? 0)
+  );
+}
+
 async function getHomepageData() {
   await connectDB();
 
-  const [featured, bestSellers, newArrivals, categories, galleryItems] =
+  const [newArrivals, madeToOrder, bestSellers, categories, galleryItems] =
     await Promise.all([
-      Product.find({ isPublished: true }).sort({ createdAt: -1 }).limit(4).lean(),
-      Product.find({ isPublished: true, inventoryMode: "READY_STOCK" })
+      // Newest first.
+      Product.find({ isPublished: true })
+        .select(CARD_FIELDS)
         .sort({ createdAt: -1 })
         .limit(4)
         .lean(),
-      Product.find({ isPublished: true }).sort({ createdAt: -1 }).limit(4).lean(),
-      Category.find({ isActive: true }).limit(8).lean(),
-      GalleryItem.find({ isApproved: true }).limit(6).lean(),
+      // A genuinely different cut, not a relabelled copy of the same query.
+      Product.find({ isPublished: true, inventoryMode: "MADE_TO_ORDER" })
+        .select(CARD_FIELDS)
+        .sort({ createdAt: -1 })
+        .limit(4)
+        .lean(),
+      getBestSellers(4),
+      Category.find({ isActive: true }).select("name slug image").limit(8).lean(),
+      GalleryItem.find({ isApproved: true })
+        .select("image title type")
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .lean(),
     ]);
 
-  return JSON.parse(JSON.stringify({ featured, bestSellers, newArrivals, categories, galleryItems }));
+  return serialize({
+    newArrivals,
+    madeToOrder,
+    bestSellers,
+    categories,
+    galleryItems,
+  });
 }
 
 export default async function HomePage() {
-  const { featured, bestSellers, newArrivals, categories, galleryItems } =
+  const { newArrivals, madeToOrder, bestSellers, categories, galleryItems } =
     await getHomepageData();
 
   return (
@@ -75,14 +121,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured Products */}
-      {featured.length > 0 && (
+      {/* New Arrivals */}
+      {newArrivals.length > 0 && (
         <section className="py-16 px-4">
           <div className="max-w-7xl mx-auto">
-            <SectionHeader title="Featured" subtitle="Handpicked just for you" />
+            <SectionHeader
+              title="New Arrivals"
+              subtitle="Fresh from the workshop"
+            />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-              {featured.map((p: any) => (
-                <ProductCard key={p._id.toString()} product={p} />
+              {newArrivals.map((p: any, i: number) => (
+                <ProductCard key={p._id} product={p} priority={i < 2} />
               ))}
             </div>
           </div>
@@ -96,7 +145,7 @@ export default async function HomePage() {
             <SectionHeader title="Browse by Category" subtitle="Find what speaks to you" />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
               {categories.map((c: any) => (
-                <CategoryCard key={c._id.toString()} category={c} />
+                <CategoryCard key={c._id} category={c} />
               ))}
             </div>
           </div>
@@ -110,21 +159,24 @@ export default async function HomePage() {
             <SectionHeader title="Best Sellers" subtitle="Loved by our customers" />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
               {bestSellers.map((p: any) => (
-                <ProductCard key={p._id.toString()} product={p} />
+                <ProductCard key={p._id} product={p} />
               ))}
             </div>
           </div>
         </section>
       )}
 
-      {/* New Arrivals */}
-      {newArrivals.length > 0 && (
+      {/* Made to Order */}
+      {madeToOrder.length > 0 && (
         <section className="py-16 px-4 bg-background-secondary">
           <div className="max-w-7xl mx-auto">
-            <SectionHeader title="New Arrivals" subtitle="Fresh from the workshop" />
+            <SectionHeader
+              title="Made to Order"
+              subtitle="Crafted for you after you order — tell us what you need"
+            />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-              {newArrivals.map((p: any) => (
-                <ProductCard key={p._id.toString()} product={p} />
+              {madeToOrder.map((p: any) => (
+                <ProductCard key={p._id} product={p} />
               ))}
             </div>
           </div>
@@ -178,12 +230,12 @@ export default async function HomePage() {
             Tag us on Instagram and be featured on our page.
           </p>
           <a
-            href="https://instagram.com"
+            href={BRAND.instagramUrl}
             target="_blank"
             rel="noreferrer"
             className="text-primary text-sm font-medium hover:underline"
           >
-            @handmadeboutique →
+            {BRAND.instagramHandle} →
           </a>
         </div>
       </section>

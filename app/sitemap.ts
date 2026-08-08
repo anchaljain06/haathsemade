@@ -11,12 +11,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connectDB();
 
   const [products, categories] = await Promise.all([
-    Product.find({ isPublished: true }).select("_id updatedAt").lean(),
+    Product.find({ isPublished: true }).select("_id slug updatedAt").lean(),
     Category.find({ isActive: true }).select("slug updatedAt").lean(),
   ]);
 
   const productUrls = products.map((p: any) => ({
-    url: `${baseUrl}/products/${p._id}`,
+    url: `${baseUrl}/products/${p.slug ?? p._id}`,
     lastModified: new Date(p.updatedAt),
   }));
 
