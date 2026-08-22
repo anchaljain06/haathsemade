@@ -6,6 +6,9 @@ import ProductFilters from "@/components/products/ProductFilters";
 import Pagination from "@/components/products/Pagination";
 import { serialize } from "@/lib/serialize";
 import { BRAND } from "@/lib/brand";
+import type { QueryFilter } from "mongoose";
+import type { IProduct } from "@/models/Product";
+import { parseInventoryMode, substringSearchFilter } from "@/lib/productSearch";
 import { Suspense } from "react";
 
 const PAGE_SIZE = 12;
@@ -29,15 +32,21 @@ export const metadata = {
 async function getProducts(params: SearchParams) {
   await connectDB();
 
-  const query: any = { isPublished: true };
-  if (params.mode) query.inventoryMode = params.mode;
+  const query: QueryFilter<IProduct> = { isPublished: true };
+  const mode = parseInventoryMode(params.mode);
+  if (mode) query.inventoryMode = mode;
 
-  if (params.q?.trim()) {
-    query.$text = { $search: params.q.trim() };
-  }
+  // Applied at query time, not stored on `query`, so the substring fallback
+  // below can reuse the same filters without it.
+  const search = params.q?.trim();
 
   if (params.category) {
-    const cat = await Category.findOne({ slug: params.category })
+    // isActive matters: a deactivated category must stop filtering, not keep
+    // quietly narrowing the catalogue.
+    const cat = await Category.findOne({
+      slug: params.category,
+      isActive: true,
+    })
       .select("_id")
       .lean();
 
@@ -57,7 +66,7 @@ async function getProducts(params: SearchParams) {
     query.categoryId = (cat as any)._id;
   }
 
-  let sortQuery: any = { createdAt: -1 };
+  let sortQuery: Record<string, 1 | -1> = { createdAt: -1 };
   if (params.sort === "price_asc") sortQuery = { price: 1 };
   if (params.sort === "price_desc") sortQuery = { price: -1 };
 
@@ -65,23 +74,35 @@ async function getProducts(params: SearchParams) {
   const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const skip = (page - 1) * PAGE_SIZE;
 
-  const [products, total, categories] = await Promise.all([
-    Product.find(query)
-      .select(CARD_FIELDS)
-      .sort(sortQuery)
-      .skip(skip)
-      .limit(PAGE_SIZE)
-      .lean(),
-    Product.countDocuments(query),
+  const run = (filter: QueryFilter<IProduct>) =>
+    Promise.all([
+      Product.find(filter)
+        .select(CARD_FIELDS)
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(PAGE_SIZE)
+        .lean(),
+      Product.countDocuments(filter),
+    ]);
+
+  const [[products, total], categories] = await Promise.all([
+    run(search ? { ...query, $text: { $search: search } } : query),
     Category.find({ isActive: true }).select("name slug").lean(),
   ]);
 
+  // Whole-word $text found nothing — retry as a substring match so "bouq"
+  // still turns up "bouquet".
+  const [finalProducts, finalTotal] =
+    search && total === 0
+      ? await run({ ...query, ...substringSearchFilter(search) })
+      : [products, total];
+
   return {
-    products: serialize(products),
-    total,
+    products: serialize(finalProducts),
+    total: finalTotal,
     categories: serialize(categories),
     page,
-    totalPages: Math.ceil(total / PAGE_SIZE),
+    totalPages: Math.ceil(finalTotal / PAGE_SIZE),
   };
 }
 

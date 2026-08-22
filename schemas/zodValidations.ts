@@ -140,3 +140,37 @@ export const settingsUpdateSchema = z.object({
     .string()
     .regex(/^\+?[0-9]{10,15}$/, "Enter a valid phone number"),
 });
+/**
+ * Gallery uploads. `image` values are Cloudinary URLs the client got back from
+ * the signed-upload widget, so they are constrained to that host rather than
+ * accepted as any string — an arbitrary URL here would render as an <img> on
+ * the public gallery.
+ */
+const cloudinaryUrl = z
+  .string()
+  .url("Must be a valid URL")
+  .refine(
+    (value) => {
+      try {
+        return new URL(value).hostname === "res.cloudinary.com";
+      } catch {
+        return false;
+      }
+    },
+    "Image must be a res.cloudinary.com URL"
+  );
+
+export const galleryCreateSchema = z.object({
+  images: z.array(cloudinaryUrl).min(1, "At least one image is required").max(20),
+  type: z.enum(["INSPIRATION", "CUSTOMER_MEMORY"]).default("INSPIRATION"),
+  title: z.string().max(160).optional(),
+});
+
+export const galleryUpdateSchema = z
+  .object({
+    isApproved: z.boolean().optional(),
+    title: z.string().max(160).optional(),
+  })
+  // Every field is optional, so an empty body would otherwise parse cleanly
+  // and turn into a no-op $set.
+  .refine((body) => Object.keys(body).length > 0, "No fields to update");
