@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { SignOutButton } from "@clerk/nextjs";
+import { signOut } from "next-auth/react";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -82,11 +82,12 @@ export default function AdminSidebar() {
         </nav>
 
         <div className="p-4 border-t border-border">
-          <SignOutButton>
-            <button className="text-sm text-destructive hover:opacity-70">
-              Sign Out
-            </button>
-          </SignOutButton>
+          <button
+            onClick={() => signOut({ redirectTo: "/" })}
+            className="text-sm text-destructive hover:opacity-70"
+          >
+            Sign Out
+          </button>
         </div>
       </aside>
 
