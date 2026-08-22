@@ -2,11 +2,24 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export interface CartItem {
-  productId: string;
+  /** Set for catalogue products. */
+  productId?: string;
+  /** Set for accepted custom / made-to-order requests. */
+  requestId?: string;
   name: string;
   image: string;
   price: number;
   quantity: number;
+}
+
+/**
+ * Stable identity for a line item. A quoted request and a catalogue product can
+ * share an id space, so the kind is part of the key.
+ */
+export function cartItemKey(
+  item: Pick<CartItem, "productId" | "requestId">
+): string {
+  return item.requestId ? `request:${item.requestId}` : `product:${item.productId}`;
 }
 
 interface CartStore {
@@ -14,8 +27,8 @@ interface CartStore {
   totalItems: number;
   totalAmount: number;
   addItem: (item: CartItem) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (key: string) => void;
+  updateQuantity: (key: string, quantity: number) => void;
   clearCart: () => void;
 }
 
@@ -33,29 +46,36 @@ export const useCartStore = create<CartStore>()(
 
       addItem: (item) =>
         set((state) => {
-          const existing = state.items.find(
-            (i) => i.productId === item.productId
-          );
+          const key = cartItemKey(item);
+          const existing = state.items.find((i) => cartItemKey(i) === key);
+
+          // A quoted request is a single one-off; don't stack duplicates.
           const items = existing
             ? state.items.map((i) =>
-                i.productId === item.productId
-                  ? { ...i, quantity: i.quantity + item.quantity }
+                cartItemKey(i) === key
+                  ? {
+                      ...i,
+                      quantity: item.requestId
+                        ? 1
+                        : i.quantity + item.quantity,
+                    }
                   : i
               )
             : [...state.items, item];
+
           return { items, ...calcTotals(items) };
         }),
 
-      removeItem: (productId) =>
+      removeItem: (key) =>
         set((state) => {
-          const items = state.items.filter((i) => i.productId !== productId);
+          const items = state.items.filter((i) => cartItemKey(i) !== key);
           return { items, ...calcTotals(items) };
         }),
 
-      updateQuantity: (productId, quantity) =>
+      updateQuantity: (key, quantity) =>
         set((state) => {
           const items = state.items.map((i) =>
-            i.productId === productId ? { ...i, quantity } : i
+            cartItemKey(i) === key ? { ...i, quantity } : i
           );
           return { items, ...calcTotals(items) };
         }),

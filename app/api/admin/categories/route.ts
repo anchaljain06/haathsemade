@@ -1,5 +1,8 @@
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { parseBody } from "@/lib/validate";
+import { categoryCreateSchema } from "@/schemas/zodValidations";
+import { slugify } from "@/lib/slugify";
 import Category from "@/models/Category";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -10,19 +13,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { name, image } = await req.json();
+  const parsed = await parseBody(req, categoryCreateSchema);
+  if (parsed.response) return parsed.response;
+  const { name, image } = parsed.data;
 
-  if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  const slug = slugify(name);
+  if (!slug) {
+    return NextResponse.json(
+      { error: "Name must contain at least one letter or number" },
+      { status: 400 }
+    );
   }
-
-  const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
   await connectDB();
 
   const existing = await Category.findOne({ slug });
   if (existing) {
-    return NextResponse.json({ error: "Category already exists" }, { status: 409 });
+    return NextResponse.json(
+      { error: "Category already exists" },
+      { status: 409 }
+    );
   }
 
   const category = await Category.create({
@@ -32,6 +42,8 @@ export async function POST(req: Request) {
     isActive: true,
   });
 
-  revalidatePath("/", "layout");
+  revalidatePath("/categories");
+  revalidatePath("/products");
+  revalidatePath("/");
   return NextResponse.json({ category }, { status: 201 });
 }

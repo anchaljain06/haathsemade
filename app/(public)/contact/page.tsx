@@ -1,3 +1,5 @@
+import { BRAND } from "@/lib/brand";
+
 export default function ContactPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-16">
@@ -16,10 +18,10 @@ export default function ContactPage() {
           💬 Chat on WhatsApp
         </a>
         <a
-          href="mailto:hello@handmadeboutique.com"
+          href={`mailto:${BRAND.contactEmail}`}
           className="flex items-center gap-3 bg-background-secondary border border-border text-foreground-muted px-5 py-3 rounded-md text-sm font-medium hover:border-primary hover:text-primary transition-colors w-fit"
         >
-          ✉️ hello@handmadeboutique.com
+          ✉️ {BRAND.contactEmail}
         </a>
       </div>
     </div>

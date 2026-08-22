@@ -1,6 +1,9 @@
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { parseBody } from "@/lib/validate";
+import { adminOrderUpdateSchema } from "@/schemas/zodValidations";
 import Order from "@/models/Order";
 
 export async function PATCH(
@@ -13,20 +16,19 @@ export async function PATCH(
   }
 
   const { id } = await props.params;
-  const body = await req.json();
-  const { status, courierName, trackingUrl, estimatedDelivery } = body;
+  if (!mongoose.isValidObjectId(id)) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  const parsed = await parseBody(req, adminOrderUpdateSchema);
+  if (parsed.response) return parsed.response;
 
   await connectDB();
 
   const updated = await Order.findByIdAndUpdate(
     id,
-    {
-      ...(status && { status }),
-      ...(courierName && { courierName }),
-      ...(trackingUrl && { trackingUrl }),
-      ...(estimatedDelivery && { estimatedDelivery }),
-    },
-    { new: true }
+    { $set: parsed.data },
+    { new: true, runValidators: true }
   );
 
   if (!updated) {

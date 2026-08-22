@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { parseBody } from "@/lib/validate";
+import { settingsUpdateSchema } from "@/schemas/zodValidations";
 import Settings from "@/models/Settings";
 
 export async function PATCH(req: Request) {
@@ -9,14 +11,9 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { whatsappNumber } = await req.json();
-
-  if (!whatsappNumber) {
-    return NextResponse.json(
-      { error: "WhatsApp number is required" },
-      { status: 400 }
-    );
-  }
+  const parsed = await parseBody(req, settingsUpdateSchema);
+  if (parsed.response) return parsed.response;
+  const { whatsappNumber } = parsed.data;
 
   await connectDB();
 

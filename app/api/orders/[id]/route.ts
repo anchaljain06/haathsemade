@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
@@ -13,6 +14,9 @@ export async function GET(
   }
 
   const { id } = await props.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
 
   await connectDB();
 

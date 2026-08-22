@@ -49,5 +49,9 @@ const RequestSchema = new Schema<IRequest>(
   { timestamps: true }
 );
 
+// "My requests", newest first; admin queue filters by status.
+RequestSchema.index({ userId: 1, createdAt: -1 });
+RequestSchema.index({ status: 1, createdAt: -1 });
+
 export default mongoose.models.Request ||
   mongoose.model<IRequest>("Request", RequestSchema);

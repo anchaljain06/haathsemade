@@ -1,5 +1,9 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { parseBody } from "@/lib/validate";
+import { categoryUpdateSchema } from "@/schemas/zodValidations";
+import { slugify } from "@/lib/slugify";
 import Category from "@/models/Category";
 import Product from "@/models/Product";
 import { NextResponse } from "next/server";
@@ -15,28 +19,48 @@ export async function PATCH(
   }
 
   const { id } = await props.params;
-  const body = await req.json();
-  const updateData: any = {};
-
-  if (body.name !== undefined) {
-    updateData.name = body.name;
-    updateData.slug = body.name
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
+  if (!mongoose.isValidObjectId(id)) {
+    return NextResponse.json({ error: "Category not found" }, { status: 404 });
   }
-  if (body.image !== undefined) updateData.image = body.image;
-  if (body.isActive !== undefined) updateData.isActive = body.isActive;
+
+  const parsed = await parseBody(req, categoryUpdateSchema);
+  if (parsed.response) return parsed.response;
+  const updates: Record<string, unknown> = { ...parsed.data };
+
+  if (typeof updates.name === "string") {
+    const slug = slugify(updates.name);
+    if (!slug) {
+      return NextResponse.json(
+        { error: "Name must contain at least one letter or number" },
+        { status: 400 }
+      );
+    }
+
+    const clash = await Category.exists({ slug, _id: { $ne: id } });
+    if (clash) {
+      return NextResponse.json(
+        { error: "Another category already uses that name" },
+        { status: 409 }
+      );
+    }
+    updates.slug = slug;
+  }
 
   await connectDB();
 
   const category = await Category.findByIdAndUpdate(
     id,
-    updateData,
-    { new: true }
+    { $set: updates },
+    { new: true, runValidators: true }
   );
 
-  revalidatePath("/", "layout");
+  if (!category) {
+    return NextResponse.json({ error: "Category not found" }, { status: 404 });
+  }
+
+  revalidatePath("/categories");
+  revalidatePath("/products");
+  revalidatePath("/");
   return NextResponse.json({ category });
 }
 
@@ -50,6 +74,9 @@ export async function DELETE(
   }
 
   const { id } = await props.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return NextResponse.json({ error: "Category not found" }, { status: 404 });
+  }
 
   await connectDB();
 
@@ -61,8 +88,13 @@ export async function DELETE(
     );
   }
 
-  await Category.findByIdAndDelete(id);
+  const deleted = await Category.findByIdAndDelete(id);
+  if (!deleted) {
+    return NextResponse.json({ error: "Category not found" }, { status: 404 });
+  }
 
-  revalidatePath("/", "layout");
+  revalidatePath("/categories");
+  revalidatePath("/products");
+  revalidatePath("/");
   return NextResponse.json({ success: true });
 }

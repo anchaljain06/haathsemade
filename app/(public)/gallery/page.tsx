@@ -1,17 +1,19 @@
 import { connectDB } from "@/lib/db";
 import GalleryItem from "@/models/GalleryItem";
 import GalleryGrid from "@/components/sections/GalleryGrid";
+import { serialize } from "@/lib/serialize";
+import { BRAND } from "@/lib/brand";
 
 async function getGalleryItems(type?: string) {
   await connectDB();
   const query: any = { isApproved: true };
   if (type) query.type = type;
   const items = await GalleryItem.find(query).sort({ createdAt: -1 }).lean();
-  return JSON.parse(JSON.stringify(items));
+  return serialize(items);
 }
 
 export const metadata = {
-  title: "Gallery — Handmade Boutique",
+  title: `Gallery — ${BRAND.name}`,
   description: "Browse our work and get inspired for your next custom order.",
 };
 

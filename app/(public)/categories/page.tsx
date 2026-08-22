@@ -1,14 +1,20 @@
 import { connectDB } from "@/lib/db";
 import Category from "@/models/Category";
 import CategoryCard from "@/components/products/CategoryCard";
+import { serialize } from "@/lib/serialize";
+import { BRAND } from "@/lib/brand";
 
 async function getCategories() {
   await connectDB();
-  return Category.find({ isActive: true }).lean();
+  // serialize(): CategoryCard is a Client Component, and .lean() still hands
+  // back ObjectId/Date instances that can't cross the boundary.
+  return serialize(
+    await Category.find({ isActive: true }).select("name slug image").lean()
+  );
 }
 
 export const metadata = {
-  title: "Browse Categories — Handmade Boutique",
+  title: `Browse Categories — ${BRAND.name}`,
   description: "Explore our handmade collections by category.",
 };
 
@@ -33,7 +39,7 @@ export default async function CategoriesPage() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {categories.map((c: any) => (
-            <CategoryCard key={c._id.toString()} category={c} />
+            <CategoryCard key={c._id} category={c} />
           ))}
         </div>
       )}

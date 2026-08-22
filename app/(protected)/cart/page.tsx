@@ -1,6 +1,6 @@
 "use client";
 
-import { useCartStore } from "@/store/cartStore";
+import { useCartStore, cartItemKey } from "@/store/cartStore";
 import Image from "next/image";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
@@ -38,7 +38,7 @@ export default function CartPage() {
         <div className="md:col-span-2 space-y-4">
           {items.map((item) => (
             <div
-              key={item.productId}
+              key={cartItemKey(item)}
               className="flex gap-4 bg-card border border-border rounded-lg p-4"
             >
               <div className="relative w-20 h-20 shrink-0 rounded-md bg-background-secondary overflow-hidden">
@@ -61,30 +61,40 @@ export default function CartPage() {
                 </p>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center border border-border rounded-md">
-                    <button
-                      onClick={() =>
-                        updateQuantity(
-                          item.productId,
-                          Math.max(1, item.quantity - 1)
-                        )
-                      }
-                      className="px-2.5 py-1 text-foreground-muted hover:text-foreground"
-                    >
-                      −
-                    </button>
-                    <span className="px-3 py-1 text-sm">{item.quantity}</span>
-                    <button
-                      onClick={() =>
-                        updateQuantity(item.productId, item.quantity + 1)
-                      }
-                      className="px-2.5 py-1 text-foreground-muted hover:text-foreground"
-                    >
-                      +
-                    </button>
-                  </div>
+                  {item.requestId ? (
+                    // A quoted custom piece is a one-off — no quantity to change.
+                    <span className="text-xs text-foreground-muted bg-background-secondary rounded-md px-2.5 py-1">
+                      Custom piece · qty 1
+                    </span>
+                  ) : (
+                    <div className="flex items-center border border-border rounded-md">
+                      <button
+                        onClick={() =>
+                          updateQuantity(
+                            cartItemKey(item),
+                            Math.max(1, item.quantity - 1)
+                          )
+                        }
+                        aria-label="Decrease quantity"
+                        className="px-2.5 py-1 text-foreground-muted hover:text-foreground"
+                      >
+                        −
+                      </button>
+                      <span className="px-3 py-1 text-sm">{item.quantity}</span>
+                      <button
+                        onClick={() =>
+                          updateQuantity(cartItemKey(item), item.quantity + 1)
+                        }
+                        aria-label="Increase quantity"
+                        className="px-2.5 py-1 text-foreground-muted hover:text-foreground"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
                   <button
-                    onClick={() => removeItem(item.productId)}
+                    onClick={() => removeItem(cartItemKey(item))}
+                    aria-label={`Remove ${item.name}`}
                     className="text-destructive hover:opacity-70"
                   >
                     <Trash2 className="w-4 h-4" />

@@ -22,7 +22,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       {children}
       <Toaster position="top-right" richColors />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* Devtools are a dev-only concern — keep them out of the prod bundle. */}
+      {process.env.NODE_ENV === "development" && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
     </QueryClientProvider>
   );
 }
