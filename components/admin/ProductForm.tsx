@@ -25,18 +25,35 @@ interface ProductFormData {
   isPublished: boolean;
 }
 
-const emptyForm: ProductFormData = {
+/**
+ * Price and stock are held as raw input strings, not numbers.
+ *
+ * Binding a number straight to the input made the leading 0 undeletable:
+ * clearing the box yields "", `Number("")` is 0, so state stayed 0 and the
+ * field snapped back to "0". A string lets the input be genuinely empty; both
+ * fields are coerced once on submit.
+ */
+type FormState = Omit<ProductFormData, "price" | "stock"> & {
+  price: string;
+  stock: string;
+};
+
+const emptyForm: FormState = {
   name: "",
   description: "",
   images: [],
-  price: 0,
+  price: "",
   categoryId: "",
   inventoryMode: "READY_STOCK",
   isCustomizable: false,
   estimatedCraftTime: "",
-  stock: 0,
+  stock: "",
   isPublished: false,
 };
+
+function toFormState(data: ProductFormData): FormState {
+  return { ...data, price: String(data.price), stock: String(data.stock) };
+}
 
 export default function ProductForm({
   categories,
@@ -46,32 +63,34 @@ export default function ProductForm({
   initialData?: ProductFormData;
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<ProductFormData>(initialData ?? emptyForm);
+  const [form, setForm] = useState<FormState>(
+    initialData ? toFormState(initialData) : emptyForm
+  );
   const [saving, setSaving] = useState(false);
   const isEdit = !!initialData?._id;
 
-  function update<K extends keyof ProductFormData>(
-    key: K,
-    value: ProductFormData[K]
-  ) {
+  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
   async function handleSubmit(publish: boolean) {
-    const result = productSchema.safeParse({ ...form, isPublished: publish });
+    // An empty box means "nothing entered": 0 for stock, and 0 for price so
+    // the schema's `gt(0)` reports it as a missing price.
+    const payload = {
+      ...form,
+      price: form.price === "" ? 0 : Number(form.price),
+      stock: form.stock === "" ? 0 : Number(form.stock),
+      isPublished: publish,
+    };
+
+    const result = productSchema.safeParse(payload);
     if (!result.success) {
       toast.error(result.error.issues[0].message);
       return;
     }
 
-    if (!form.name || !form.categoryId || form.price <= 0) {
-      toast.error("Please fill in name, category, and a valid price");
-      return;
-    }
-
     setSaving(true);
     try {
-      const payload = { ...form, isPublished: publish };
       const url = isEdit
         ? `/api/admin/products/${form._id}`
         : "/api/admin/products";
@@ -142,8 +161,10 @@ export default function ProductForm({
           </label>
           <input
             type="number"
+            min="0"
+            placeholder="0"
             value={form.price}
-            onChange={(e) => update("price", Number(e.target.value))}
+            onChange={(e) => update("price", e.target.value)}
             className="w-full border border-border rounded-md px-4 py-2.5 text-sm bg-card focus:outline-none focus:border-primary"
           />
         </div>
@@ -153,8 +174,10 @@ export default function ProductForm({
           </label>
           <input
             type="number"
+            min="0"
+            placeholder="0"
             value={form.stock}
-            onChange={(e) => update("stock", Number(e.target.value))}
+            onChange={(e) => update("stock", e.target.value)}
             className="w-full border border-border rounded-md px-4 py-2.5 text-sm bg-card focus:outline-none focus:border-primary"
           />
         </div>
