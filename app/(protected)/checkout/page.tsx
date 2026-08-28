@@ -137,6 +137,12 @@ export default function CheckoutPage() {
           router.push("/profile?reason=phone_required&redirect=/checkout");
           return;
         }
+        if (data.error === "RATE_LIMITED") {
+          // The cart is deliberately left intact — this is a "try again in a
+          // moment", not a failed order.
+          toast.error(data.message ?? "Too many attempts. Please wait a moment.");
+          return;
+        }
         throw new Error(data.error);
       }
 

@@ -63,6 +63,10 @@ function NewRequestContent() {
           router.push("/profile?reason=phone_required&redirect=/custom-orders");
           return;
         }
+        if (err.error === "RATE_LIMITED") {
+          toast.error(err.message ?? "Too many requests. Please wait a few minutes.");
+          return;
+        }
         throw new Error(err.error);
       }
 

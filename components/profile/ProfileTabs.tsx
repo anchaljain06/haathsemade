@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { addressSchema } from "@/schemas/zodValidations";
+import { addressSchema, profileUpdateSchema } from "@/schemas/zodValidations";
 
 interface Address {
   _id?: string;
@@ -50,17 +50,35 @@ export default function ProfileTabs({
   });
 
   async function handleSaveProfile() {
+    // Validate against the same schema the route uses, so a bad phone is
+    // caught before the round-trip and reported as itself rather than as a
+    // generic failure. Mirrors handleAddAddress below.
+    const result = profileUpdateSchema.safeParse({ name, phone });
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone }),
+        body: JSON.stringify(result.data),
       });
-      if (!res.ok) throw new Error("Failed to save");
+
+      if (!res.ok) {
+        // parseBody returns { error: "<path>: <message>" } on a 400.
+        const body = await res.json().catch(() => null);
+        toast.error(body?.error ?? "Failed to save");
+        return;
+      }
+
       toast.success("Profile updated");
 
-      if (redirectAfterSave && phone) {
+      // Only bounce back to checkout once a real number is saved — the
+      // PHONE_REQUIRED gate would just send them straight back otherwise.
+      if (redirectAfterSave && result.data.phone) {
         router.push(redirectAfterSave);
       }
     } catch {

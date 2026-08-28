@@ -121,7 +121,19 @@ export const createRequestSchema = z.object({
 
 export const profileUpdateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
-  phone: z.string().max(20).optional(),
+  // Trimmed, then either empty or a real number. Empty has to stay legal so a
+  // user with no phone yet can still save a name change — and trimming means a
+  // whitespace-only value lands as "", which the PHONE_REQUIRED gate on
+  // /api/orders and /api/requests correctly rejects. Without the trim, " " is
+  // truthy and walks straight past that gate.
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .refine((v) => v === "" || /^\+?[0-9]{10,15}$/.test(v), {
+      message: "Enter a valid phone number",
+    })
+    .optional(),
 });
 
 export const categoryCreateSchema = z.object({

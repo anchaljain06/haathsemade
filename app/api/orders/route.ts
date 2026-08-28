@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { parseBody } from "@/lib/validate";
+import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { createOrderSchema } from "@/schemas/zodValidations";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
@@ -27,6 +28,16 @@ export async function POST(req: Request) {
 
   if (!user.phone) {
     return NextResponse.json({ error: "PHONE_REQUIRED" }, { status: 403 });
+  }
+
+  // Keyed by user, not IP: the route is behind auth, and a shared IP (office,
+  // mobile carrier NAT) would otherwise let one customer lock out another.
+  const limit = await rateLimit(`orders:${user._id}`, 5, 60_000);
+  if (!limit.ok) {
+    return rateLimitResponse(
+      limit,
+      "Too many orders placed just now. Please wait a moment and try again."
+    );
   }
 
   const parsed = await parseBody(req, createOrderSchema);

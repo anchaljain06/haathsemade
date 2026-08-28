@@ -57,6 +57,10 @@ function CustomOrdersContent() {
           router.push("/login");
           return;
         }
+        if (err.error === "RATE_LIMITED") {
+          toast.error(err.message ?? "Too many requests. Please wait a few minutes.");
+          return;
+        }
         if (err.error === "PHONE_REQUIRED") {
           router.push("/profile?reason=phone_required&redirect=/custom-orders");
           return;
