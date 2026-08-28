@@ -1,10 +1,13 @@
 import Link from "next/link";
 
 /**
- * clerkMiddleware() runs on every page route and normalizes the response
- * status, so notFound() renders this page with a 200 instead of a 404 (verified:
- * paths excluded from the middleware matcher do return a real 404). Until that
+ * The auth middleware runs on every page route and normalizes the response
+ * status, so notFound() can render this page with a 200 instead of a 404 —
+ * paths excluded from the middleware matcher do return a real 404. Until that
  * changes, noindex keeps search engines from indexing soft 404s.
+ *
+ * Was originally observed under clerkMiddleware(); the Auth.js middleware wraps
+ * responses the same way, so the guard stays.
  */
 export const metadata = {
   robots: { index: false, follow: false },

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShoppingCart, Menu, Heart } from "lucide-react";
-import { useUser, SignOutButton } from "@clerk/nextjs";
+import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -31,7 +31,8 @@ const navLinks = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { user, isSignedIn } = useUser();
+  const { data: session } = useSession();
+  const isSignedIn = !!session?.user;
   const [mobileOpen, setMobileOpen] = useState(false);
   const totalItems = useCartStore((s) => s.totalItems);
   const savedCount = useWishlistStore((s) => s.items.length);
@@ -105,7 +106,7 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Avatar className="w-8 h-8 cursor-pointer">
                     <AvatarFallback className="bg-primary text-white text-xs">
-                      {user?.firstName?.charAt(0) ?? "U"}
+                      {session?.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
@@ -120,11 +121,12 @@ export default function Navbar() {
                     <Link href="/profile">Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <SignOutButton>
-                    <DropdownMenuItem className="text-destructive cursor-pointer">
-                      Sign Out
-                    </DropdownMenuItem>
-                  </SignOutButton>
+                  <DropdownMenuItem
+                    className="text-destructive cursor-pointer"
+                    onClick={() => signOut({ redirectTo: "/" })}
+                  >
+                    Sign Out
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
