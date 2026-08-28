@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { parseBody } from "@/lib/validate";
+import { galleryCreateSchema } from "@/schemas/zodValidations";
 import GalleryItem from "@/models/GalleryItem";
 import { revalidatePath } from "next/cache";
 
@@ -10,22 +12,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { images, type = "INSPIRATION" } = await req.json();
-
-  if (!images || !Array.isArray(images) || images.length === 0) {
-    return NextResponse.json({ error: "Images array is required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, galleryCreateSchema);
+  if (parsed.response) return parsed.response;
+  const { images, type, title } = parsed.data;
 
   await connectDB();
 
-  const galleryDocs = images.map((url: string) => ({
-    image: url,
-    type: type,
-    isApproved: true,
-  }));
+  const createdItems = await GalleryItem.insertMany(
+    images.map((url) => ({
+      image: url,
+      type,
+      ...(title ? { title } : {}),
+      isApproved: true,
+    }))
+  );
 
-  const createdItems = await GalleryItem.insertMany(galleryDocs);
-  
   revalidatePath("/gallery");
 
   return NextResponse.json({ success: true, items: createdItems }, { status: 201 });

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import { isValidObjectId } from "mongoose";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { parseBody } from "@/lib/validate";
+import { galleryUpdateSchema } from "@/schemas/zodValidations";
 import GalleryItem from "@/models/GalleryItem";
 import { revalidatePath } from "next/cache";
 
@@ -14,13 +17,20 @@ export async function PATCH(
   }
 
   const { id } = await props.params;
-  const { isApproved } = await req.json();
+  // Without this a non-ObjectId path segment throws a CastError, i.e. a 500
+  // for what is really a bad request.
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
+
+  const parsed = await parseBody(req, galleryUpdateSchema);
+  if (parsed.response) return parsed.response;
 
   await connectDB();
 
   const item = await GalleryItem.findByIdAndUpdate(
     id,
-    { isApproved },
+    { $set: parsed.data },
     { new: true }
   );
 
@@ -42,6 +52,9 @@ export async function DELETE(
   }
 
   const { id } = await props.params;
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
 
   await connectDB();
 

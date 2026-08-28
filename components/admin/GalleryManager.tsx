@@ -43,6 +43,10 @@ export default function GalleryManager({
         }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error ?? "Upload failed");
+        return;
+      }
       setItems((prev) => [...data.items, ...prev]);
       setNewImages([]);
       toast.success("Images uploaded");
