@@ -87,6 +87,7 @@ export const adminOrderUpdateSchema = z.object({
       "PACKED",
       "SHIPPED",
       "DELIVERED",
+      "CANCELLED",
     ])
     .optional(),
   courierName: z.string().max(120).optional(),

@@ -20,7 +20,25 @@ const statusOptions = [
   "PACKED",
   "SHIPPED",
   "DELIVERED",
+  "CANCELLED",
 ];
+
+/**
+ * How long an order has been sitting unconfirmed.
+ *
+ * PENDING_CONFIRMATION means the customer checked out but payment has not been
+ * confirmed over WhatsApp yet — and the stock was already decremented at
+ * checkout. So a stale row here is inventory held off the shelf by an order
+ * nobody has paid for. Surfacing the age makes those findable without
+ * scrolling; cancelling one hands the stock back.
+ */
+function waitingFor(createdAt: string) {
+  const hours = (Date.now() - new Date(createdAt).getTime()) / 36e5;
+  if (hours < 1) return { label: "just now", stale: false };
+  if (hours < 24) return { label: `${Math.floor(hours)}h waiting`, stale: hours >= 12 };
+  const days = Math.floor(hours / 24);
+  return { label: `${days}d waiting`, stale: true };
+}
 
 export default function OrdersTable({ orders }: { orders: Order[] }) {
   const [search, setSearch] = useState("");
@@ -96,6 +114,26 @@ export default function OrdersTable({ orders }: { orders: Order[] }) {
                   <span className="text-xs bg-background-secondary px-2 py-1 rounded-full">
                     {o.status.replace(/_/g, " ")}
                   </span>
+                  {o.status === "PENDING_CONFIRMATION" &&
+                    (() => {
+                      const { label, stale } = waitingFor(o.createdAt);
+                      return (
+                        <p
+                          className={`text-xs mt-1 ${
+                            stale
+                              ? "text-amber-600 font-medium"
+                              : "text-foreground-muted"
+                          }`}
+                          title={
+                            stale
+                              ? "This order is holding stock that nobody has paid for yet"
+                              : undefined
+                          }
+                        >
+                          {label}
+                        </p>
+                      );
+                    })()}
                 </td>
                 <td className="px-4 py-3">
                   <Link

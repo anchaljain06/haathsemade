@@ -7,7 +7,8 @@ export type OrderStatus =
   | "QUALITY_CHECK"
   | "PACKED"
   | "SHIPPED"
-  | "DELIVERED";
+  | "DELIVERED"
+  | "CANCELLED";
 
 export interface IOrderItem {
   productId: mongoose.Types.ObjectId;
@@ -20,6 +21,17 @@ export interface IOrderItem {
 export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;
   items: IOrderItem[];
+  /**
+   * What this order actually took out of stock, recorded at creation.
+   *
+   * Only READY_STOCK lines decrement, and the order items themselves do not
+   * carry inventoryMode — so without this there is no way to know what to give
+   * back on a cancel, and reading inventoryMode later would be wrong if it
+   * changed in the meantime.
+   */
+  reservedStock: { productId: mongoose.Types.ObjectId; quantity: number }[];
+  /** Set once, when the reserved units are handed back. Guards double-release. */
+  stockReleasedAt?: Date;
   totalAmount: number;
   status: OrderStatus;
   shippingAddress: object;
@@ -42,10 +54,27 @@ const OrderSchema = new Schema<IOrder>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     items: [OrderItemSchema],
+    reservedStock: [
+      {
+        _id: false,
+        productId: { type: Schema.Types.ObjectId, ref: "Product" },
+        quantity: Number,
+      },
+    ],
+    stockReleasedAt: Date,
     totalAmount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["PENDING_CONFIRMATION","PAYMENT_COMPLETED", "CRAFTING", "QUALITY_CHECK", "PACKED", "SHIPPED", "DELIVERED"],
+      enum: [
+        "PENDING_CONFIRMATION",
+        "PAYMENT_COMPLETED",
+        "CRAFTING",
+        "QUALITY_CHECK",
+        "PACKED",
+        "SHIPPED",
+        "DELIVERED",
+        "CANCELLED",
+      ],
       default: "PENDING_CONFIRMATION",
     },
     shippingAddress: { type: Object, required: true },
