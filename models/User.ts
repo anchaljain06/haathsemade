@@ -54,10 +54,16 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-// Sign-in falls back to an email match for accounts that predate googleId.
-// Deliberately not unique: existing data may hold duplicates, and a failed
-// index build would take the whole app down. See CLAUDE.md.
-UserSchema.index({ email: 1 });
+// Sign-in falls back to an email match for accounts that predate googleId
+// (auth.ts), and `findOne` returns an arbitrary match — so a duplicate email
+// would attach a returning customer to whichever document Mongo happened to
+// hand back. Verified duplicate-free before making this unique.
+//
+// NOTE: Mongoose will not convert an existing index to different options; it
+// calls createIndex and gets an IndexOptionsConflict it does not surface
+// loudly. Changing these options requires dropping the old index first — see
+// scripts/fix-user-indexes.mjs.
+UserSchema.index({ email: 1 }, { unique: true });
 
 export default mongoose.models.User ||
   mongoose.model<IUser>("User", UserSchema);
