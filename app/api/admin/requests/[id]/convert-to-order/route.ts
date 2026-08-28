@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isValidObjectId } from "mongoose";
 import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import Request from "@/models/Request";
@@ -15,6 +16,12 @@ export async function POST(
   }
 
   const { id } = await props.params;
+
+  // Without this a malformed id reaches findById and throws a CastError,
+  // which surfaces as a 500 rather than a 400.
+  if (!isValidObjectId(id)) {
+    return NextResponse.json({ error: "Invalid request id" }, { status: 400 });
+  }
 
   await connectDB();
 
@@ -35,10 +42,29 @@ export async function POST(
   }
 
   const customer = await User.findById(requestDoc.userId);
+
+  if (!customer) {
+    return NextResponse.json(
+      { error: "The customer who made this request no longer exists" },
+      { status: 409 }
+    );
+  }
+
+  // No `?? {}` fallback here: Mongoose's `required` on an Object path is
+  // satisfied by an empty object, so falling back would happily create a
+  // PAYMENT_COMPLETED order with nowhere to ship it.
   const defaultAddress =
-    customer?.addresses?.find((a: any) => a.isDefault) ??
-    customer?.addresses?.[0] ??
-    {};
+    customer.addresses?.find((a: any) => a.isDefault) ?? customer.addresses?.[0];
+
+  if (!defaultAddress) {
+    return NextResponse.json(
+      {
+        error:
+          "This customer has no saved delivery address — ask them to add one before converting.",
+      },
+      { status: 409 }
+    );
+  }
 
   const productName =
     (requestDoc.productId as any)?.name ??
@@ -57,7 +83,7 @@ export async function POST(
     ],
     totalAmount: requestDoc.quotedPrice,
     status: "PAYMENT_COMPLETED",
-    shippingAddress: defaultAddress,
+    shippingAddress: defaultAddress.toObject(),
   });
 
   requestDoc.status = "ACCEPTED";

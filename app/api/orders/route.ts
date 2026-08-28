@@ -7,6 +7,18 @@ import Order from "@/models/Order";
 import Product from "@/models/Product";
 import RequestModel from "@/models/Request";
 
+/** A READY_STOCK line whose stock has been decremented and may need giving back. */
+type Reservation = { productId: unknown; name: string; quantity: number };
+
+/** Hand back every unit we took. Best-effort: never throws into the caller. */
+async function releaseStock(reservations: Reservation[]) {
+  await Promise.allSettled(
+    reservations.map((r) =>
+      Product.updateOne({ _id: r.productId }, { $inc: { stock: r.quantity } })
+    )
+  );
+}
+
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
@@ -48,6 +60,10 @@ export async function POST(req: Request) {
     quantity: number;
   }[] = [];
 
+  // Filled during validation, drained into atomic $inc calls once every other
+  // check has passed — so we never take stock for an order that then 409s.
+  const toReserve: Reservation[] = [];
+
   if (quantityById.size > 0) {
     const products = await Product.find({
       _id: { $in: [...quantityById.keys()] },
@@ -75,15 +91,25 @@ export async function POST(req: Request) {
         );
       }
 
-      if (product.inventoryMode === "READY_STOCK" && product.stock < quantity) {
-        return NextResponse.json(
-          {
-            error: `Only ${product.stock} left of “${product.name}”`,
-            productId: String(product._id),
-            available: product.stock,
-          },
-          { status: 409 }
-        );
+      if (product.inventoryMode === "READY_STOCK") {
+        // A cheap pre-check purely for the friendly "only N left" message. The
+        // real guarantee is the guarded $inc below; this read can go stale.
+        if (product.stock < quantity) {
+          return NextResponse.json(
+            {
+              error: `Only ${product.stock} left of “${product.name}”`,
+              productId: String(product._id),
+              available: product.stock,
+            },
+            { status: 409 }
+          );
+        }
+
+        toReserve.push({
+          productId: product._id,
+          name: product.name,
+          quantity,
+        });
       }
 
       orderItems.push({
@@ -130,13 +156,51 @@ export async function POST(req: Request) {
     0
   );
 
-  const order = await Order.create({
-    userId: user._id,
-    items: orderItems,
-    totalAmount,
-    shippingAddress,
-    status: "PENDING_CONFIRMATION",
-  });
+  // Reserve stock. The `stock: { $gte: quantity }` guard on the $inc *is* the
+  // concurrency check: two customers racing for the last item both pass the
+  // read above, but only one update matches a document. Anything already taken
+  // when a later line fails is handed straight back.
+  const reserved: Reservation[] = [];
+
+  for (const line of toReserve) {
+    const result = await Product.updateOne(
+      { _id: line.productId, stock: { $gte: line.quantity } },
+      { $inc: { stock: -line.quantity } }
+    );
+
+    if (result.modifiedCount !== 1) {
+      await releaseStock(reserved);
+      const current = await Product.findById(line.productId)
+        .select("stock")
+        .lean<{ stock?: number }>();
+
+      return NextResponse.json(
+        {
+          error: `Only ${current?.stock ?? 0} left of “${line.name}”`,
+          productId: String(line.productId),
+          available: current?.stock ?? 0,
+        },
+        { status: 409 }
+      );
+    }
+
+    reserved.push(line);
+  }
+
+  let order;
+  try {
+    order = await Order.create({
+      userId: user._id,
+      items: orderItems,
+      totalAmount,
+      shippingAddress,
+      status: "PENDING_CONFIRMATION",
+    });
+  } catch (err) {
+    // The order never existed, so the units we took are nobody's.
+    await releaseStock(reserved);
+    throw err;
+  }
 
   return NextResponse.json({ order }, { status: 201 });
 }
