@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { parseBody } from "@/lib/validate";
 import { rateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { releaseStock } from "@/lib/stock";
 import { createOrderSchema } from "@/schemas/zodValidations";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
@@ -10,15 +11,6 @@ import RequestModel from "@/models/Request";
 
 /** A READY_STOCK line whose stock has been decremented and may need giving back. */
 type Reservation = { productId: unknown; name: string; quantity: number };
-
-/** Hand back every unit we took. Best-effort: never throws into the caller. */
-async function releaseStock(reservations: Reservation[]) {
-  await Promise.allSettled(
-    reservations.map((r) =>
-      Product.updateOne({ _id: r.productId }, { $inc: { stock: r.quantity } })
-    )
-  );
-}
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -206,6 +198,12 @@ export async function POST(req: Request) {
       totalAmount,
       shippingAddress,
       status: "PENDING_CONFIRMATION",
+      // Recorded so a cancel knows exactly what to hand back. Only
+      // READY_STOCK lines are in `reserved`.
+      reservedStock: reserved.map((r) => ({
+        productId: r.productId,
+        quantity: r.quantity,
+      })),
     });
   } catch (err) {
     // The order never existed, so the units we took are nobody's.

@@ -31,6 +31,7 @@ const statusOptions = [
   "PACKED",
   "SHIPPED",
   "DELIVERED",
+  "CANCELLED",
 ];
 
 export default function OrderDetailManager({ order }: { order: Order }) {
